@@ -5,6 +5,7 @@ import { AxisData } from "./ScatterPlot";
 import axios from "axios";
 import ScatterPlot from "./ScatterPlot";
 import SymbolSearch from "./SymbolSearch";
+import { roundToSignificantDigits } from "@/util";
 
 const apiKey = "HIQXUK3H0JU444C2";
 const fetchQuote = async (symbol: string) => {
@@ -12,7 +13,7 @@ const fetchQuote = async (symbol: string) => {
 
   try {
     const response = await axios.get(url);
-    return response.data["Global Quote"]["05. price"];
+    return parseFloat(response.data["Global Quote"]["05. price"]);
   } catch (error) {
     console.error("Error fetching option chain data:", error);
     return null;
@@ -193,9 +194,9 @@ export default function Page() {
       <div className="flex-grow">
         {plotData && (
           <ScatterPlot
-            currentPrice={currentPrice!}
+            optionType={optionType}
+            currentPrice={roundToSignificantDigits(currentPrice!, 5)}
             data={plotData}
-            className="w-full h-full"
           />
         )}
       </div>
@@ -341,7 +342,7 @@ function filterData({
 
 const CustomSelect = ({ value, onChange, options }: any) => (
   <select value={value} onChange={(e) => onChange(e.target.value)}>
-    {options.map((option) => (
+    {options.map((option: any) => (
       <option key={option.value} value={option.value}>
         {option.label}
       </option>
