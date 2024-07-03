@@ -2,6 +2,9 @@ import React, { useRef, useEffect, useState, useCallback } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
+const xColor = "#d85040";
+const yColor = "#40b37d";
+const zColor = "#4a7aac";
 // Types and Interfaces
 type Dimension = "x" | "y" | "z";
 
@@ -35,7 +38,7 @@ interface TooltipState {
 }
 
 // Constants
-const GRID_SIZE = 20;
+const GRID_SIZE = 16;
 const POINT_SIZE = 0.64;
 
 // Utility Functions
@@ -201,14 +204,14 @@ const ScatterPlot: React.FC<ScatterPlotProps> = ({
       position: THREE.Vector3,
       size = 4,
       offset = new THREE.Vector3(0, 0, 0),
-      fillStyle = "rgba(0,0,0,.64)" // Changed to full opacity black as default
+      fillStyle = "rgba(0,0,0, .64)" // Changed to full opacity black as default
     ) => {
       const canvas = document.createElement("canvas");
       const context = canvas.getContext("2d");
       if (context) {
         const pixelRatio = window.devicePixelRatio || 1;
 
-        const fontSize = parseInt(font.match(/\d+/)?.[0] || "32", 10);
+        const fontSize = parseInt(font.match(/\d+/)?.[0] || "8", 10);
         context.font = font;
         const textMetrics = context.measureText(text);
 
@@ -241,9 +244,9 @@ const ScatterPlot: React.FC<ScatterPlotProps> = ({
         context.fillText(text, canvasWidth / 2, canvasHeight / 2);
 
         // Optional: Add a subtle white border for better visibility
-        context.strokeStyle = "rgba(255, 255, 255, 0.5)";
-        context.lineWidth = 1;
-        context.strokeText(text, canvasWidth / 2, canvasHeight / 2);
+        // context.strokeStyle = "rgba(255, 255, 255, 0.8)";
+        // context.lineWidth = 1;
+        // context.strokeText(text, canvasWidth / 2, canvasHeight / 2);
       }
 
       const texture = new THREE.Texture(canvas);
@@ -275,6 +278,69 @@ const ScatterPlot: React.FC<ScatterPlotProps> = ({
     },
     [rendererRef]
   );
+
+  const addAxisLabels = useCallback(
+    (scene: THREE.Scene) => {
+      const axes = ["x", "y", "z"] as const;
+      const axisColors = {
+        x: xColor, // Red
+        y: yColor, // Green
+        z: zColor, // Blue
+      };
+
+      axes.forEach((axis) => {
+        const axisData = data[axis].data;
+        const min = Math.min(...axisData);
+        const max = Math.max(...axisData);
+
+        let minPosition = new THREE.Vector3();
+        let maxPosition = new THREE.Vector3();
+        let minOffset = new THREE.Vector3();
+        let maxOffset = new THREE.Vector3();
+
+        if (axis === "x") {
+          minPosition.set(-GRID_SIZE / 2, 0, 0);
+          maxPosition.set(GRID_SIZE / 2, 0, 0);
+          minOffset.set(-2, 0, 0);
+          maxOffset.set(2, 0, 0);
+        } else if (axis === "y") {
+          minPosition.set(0, -GRID_SIZE / 2, 0);
+          maxPosition.set(0, GRID_SIZE / 2, 0);
+          minOffset.set(0, -2, 0);
+          maxOffset.set(0, 2, 0);
+        } else {
+          minPosition.set(0, 0, -GRID_SIZE / 2);
+          maxPosition.set(0, 0, GRID_SIZE / 2);
+          minOffset.set(0, 0, -2);
+          maxOffset.set(0, 0, 2);
+        }
+
+        scene.add(
+          addLabel(
+            min.toFixed(2),
+            "12px Arial",
+            minPosition,
+            2,
+            minOffset,
+            axisColors[axis]
+          )
+        );
+
+        scene.add(
+          addLabel(
+            max.toFixed(2),
+            "12px Arial",
+            maxPosition,
+            2,
+            maxOffset,
+            axisColors[axis]
+          )
+        );
+      });
+    },
+    [data, addLabel]
+  );
+
   const handleMouseMove = useCallback(
     (event: MouseEvent, points: THREE.Points, normalizedData: Point[]) => {
       if (!rendererRef.current || !cameraRef.current) return;
@@ -338,40 +404,46 @@ const ScatterPlot: React.FC<ScatterPlotProps> = ({
     sceneRef.current.add(
       addLabel(
         data.x.name,
-        `32px Arial`,
+        `8px Arial`,
         new THREE.Vector3(12, 0, 0),
-        4,
-        new THREE.Vector3(4, 0, 0)
+        2,
+        new THREE.Vector3(4, 0, 0),
+        xColor
       )
     );
     sceneRef.current.add(
       addLabel(
         data.y.name,
-        `32px Arial`,
+        `8px Arial`,
         new THREE.Vector3(0, GRID_SIZE, 0),
-        4,
-        new THREE.Vector3(0, 4, 0)
+        2,
+        new THREE.Vector3(0, 2, 0),
+        yColor
       )
     );
     sceneRef.current.add(
       addLabel(
         data.z.name,
-        `32px Arial`,
+        `8px Arial`,
         new THREE.Vector3(0, 0, 10),
-        4,
-        new THREE.Vector3(0, 0, 4)
+        2,
+        new THREE.Vector3(0, 0, 4),
+        zColor
       )
     );
     sceneRef.current.add(
       addLabel(
         `Price: $${currentPrice}`,
-        `Bold 16px Arial`,
+        `16px Arial`,
         new THREE.Vector3(-10, normalizedCurrentPrice, 0),
-        4,
+        2,
         new THREE.Vector3(-4, 0, 0),
         "rgba(255,165,0,0.95)"
       )
     );
+
+    // Add min and max labels for each axis
+    addAxisLabels(sceneRef.current);
 
     const onMouseMove = (event: MouseEvent) =>
       handleMouseMove(event, points, normalizedData);

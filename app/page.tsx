@@ -6,6 +6,7 @@ import axios from "axios";
 import ScatterPlot from "./ScatterPlot";
 import SymbolSearch from "./SymbolSearch";
 import { roundToSignificantDigits } from "@/util";
+import Loader from "./Loader";
 
 const apiKey = "HIQXUK3H0JU444C2";
 const fetchQuote = async (symbol: string) => {
@@ -21,6 +22,7 @@ const fetchQuote = async (symbol: string) => {
 };
 
 interface OptionsMetrics {
+  impliedVolatility: number;
   intrinsicValue: number;
   extrinsicValue: number;
   markPrice: number;
@@ -48,23 +50,26 @@ interface OptionsData {
 
 export default function Page() {
   const [symbol, setSymbol] = useState("NVDA");
+  let [isLoading, setIsLoading] = useState(true);
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [optionType, setOptionType] = useState("put");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [fromStrikePrice, setFromStrikePrice] = useState<number | null>(null);
   const [toStrikePrice, setToStrikePrice] = useState<number | null>(null);
-  const [targetMetric, setTargetMetric] = useState("extrinsicValue");
+  const [targetMetric, setTargetMetric] = useState("impliedVolatility");
   const [plotData, setPlotData] = useState<AxisData | undefined>(undefined);
   const [rawData, setRawData] = useState<OptionsData | undefined>(undefined);
 
   // ** FETCH CURRENT PRICE
   useEffect(() => {
     const fetchCurrentQuote = async () => {
+      setIsLoading(true);
       const price = await fetchQuote(symbol);
       if (price) {
         setCurrentPrice(price);
       }
+      setIsLoading(false);
     };
     fetchCurrentQuote();
   }, [symbol]);
@@ -73,9 +78,11 @@ export default function Page() {
   useEffect(() => {
     const fetchData = async () => {
       if (!currentPrice) return;
+      setIsLoading(true);
       const data = await fetchOptionPremiums(symbol, currentPrice);
 
       setRawData(data);
+      setIsLoading(false);
     };
 
     fetchData();
@@ -131,10 +138,7 @@ export default function Page() {
     setCurrentPrice(null); // Reset currentPrice when a new symbol is selected
   };
 
-  if (!plotData || currentPrice === null) return null;
-
-  console.log("plotDat", plotData);
-  console.log("currentPrice", currentPrice);
+  if (!plotData || currentPrice === null) return <Loader text="fetching🏋️🏋️" />;
 
   return (
     <div className="flex flex-col h-screen">
@@ -157,6 +161,7 @@ export default function Page() {
             value={targetMetric}
             onChange={setTargetMetric}
             options={[
+              { value: "impliedVolatility", label: "Implied Volatility" },
               { value: "markPrice", label: "Mark Price" },
               { value: "intrinsicValue", label: "Intrinsic Value" },
               { value: "extrinsicValue", label: "Extrinsic Value" },
@@ -227,6 +232,7 @@ async function fetchOptionPremiums(
       const theta = parseFloat(option.theta);
       const vega = parseFloat(option.vega);
       const rho = parseFloat(option.rho);
+      const impliedVolatility = parseFloat(option.implied_volatility);
 
       let intrinsicValue = 0;
       if (option.type === "call") {
@@ -238,6 +244,7 @@ async function fetchOptionPremiums(
       const extrinsicValue = markPrice - intrinsicValue;
 
       const metrics: OptionsMetrics = {
+        impliedVolatility,
         intrinsicValue,
         extrinsicValue,
         markPrice,
