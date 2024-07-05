@@ -99,14 +99,18 @@ export default function Page() {
         today.getTime() + 42 * 24 * 60 * 60 * 1000
       );
 
-      setStartDate(oneWeekFromNow.toISOString().split("T")[0]);
-      setEndDate(sixWeeksFromNow.toISOString().split("T")[0]);
+      if (!startDate) {
+        setStartDate(oneWeekFromNow.toISOString().split("T")[0]);
+      }
+      if (!endDate) {
+        setEndDate(sixWeeksFromNow.toISOString().split("T")[0]);
+      }
 
-      const lowerBound = Math.round(currentPrice * 0.75);
-      const upperBound = Math.round(currentPrice * 1.25);
+      const lowerStrikeDefault = Math.round(currentPrice * 0.75);
+      const upperStrikeDeafult = Math.round(currentPrice * 1.25);
 
-      setFromStrikePrice(lowerBound);
-      setToStrikePrice(upperBound);
+      setFromStrikePrice(lowerStrikeDefault);
+      setToStrikePrice(upperStrikeDeafult);
     }
   }, [currentPrice]);
 
